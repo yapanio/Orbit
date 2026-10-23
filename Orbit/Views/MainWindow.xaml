@@ -1,0 +1,640 @@
+<Window x:Class="Orbit.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:Orbit.Converters"
+        xmlns:viewmodels="clr-namespace:Orbit.ViewModels"
+        mc:Ignorable="d"
+        Title="Orbit - Local Development Environment Manager" 
+        Height="800" Width="1280"
+        MinHeight="650" MinWidth="1050"
+        WindowStartupLocation="CenterScreen"
+        Background="#0F172A"
+        Foreground="#F8FAFC"
+        FontFamily="Segoe UI, Inter, sans-serif">
+
+    <Window.Resources>
+        <!-- Converters -->
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+        <converters:StatusToBadgeBackgroundConverter x:Key="StatusToBadgeBgConverter" />
+        <converters:TrackedToBrushConverter x:Key="TrackedToBrushConverter" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <!-- Base Button Template -->
+        <Style x:Key="ModernButtonBase" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center" 
+                                              Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.75" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.35" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Start Button (Emerald Green) -->
+        <Style x:Key="StartButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+            <Setter Property="Background" Value="#10B981" />
+        </Style>
+
+        <!-- Stop Button (Crimson Red) -->
+        <Style x:Key="StopButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+            <Setter Property="Background" Value="#EF4444" />
+        </Style>
+
+        <!-- Restart Button (Amber) -->
+        <Style x:Key="RestartButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+            <Setter Property="Background" Value="#F59E0B" />
+        </Style>
+
+        <!-- Secondary Button (Slate) -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonBase}">
+            <Setter Property="Background" Value="#334155" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+        </Style>
+
+        <!-- Pin Button in DataGrid -->
+        <Style x:Key="PinButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.75" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid Styles -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BorderBrush" Value="#334155" />
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#F1F5F9" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BorderBrush" Value="#1E293B" />
+            <Setter Property="MinHeight" Value="42" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1E293B" />
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#25334D" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="#FFFFFF" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+    </Window.Resources>
+
+    <!-- Main Window Grid -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /> <!-- Top Header -->
+            <RowDefinition Height="Auto" /> <!-- Dashboard Cards -->
+            <RowDefinition Height="Auto" /> <!-- Search and Filter Bar -->
+            <RowDefinition Height="*" />    <!-- Content Area (DataGrid + Detail Panel) -->
+            <RowDefinition Height="Auto" /> <!-- Bottom Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Top Header -->
+        <Border Grid.Row="0" Background="#1E293B" BorderBrush="#334155" BorderThickness="0,0,0,1" Padding="20,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- App Brand / Logo -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="#4F46E5" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                        <TextBlock Text="🪐" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="ORBIT" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,8,0" />
+                            <Border Background="#10B981" CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Margin="0,0,6,0">
+                                <TextBlock Text="v1.0" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF" />
+                            </Border>
+                            <Border Background="#3B82F6" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                <TextBlock Text="ADMINISTRATOR" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Local Development Environment Manager • Windows Services Controller" 
+                                   FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Quick Actions / Status Indicator -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource SecondaryButtonStyle}" 
+                            Command="{Binding RefreshCommand}" 
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⟳" FontSize="14" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Refresh Services" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. Dashboard Statistics Cards -->
+        <Grid Grid.Row="1" Margin="20,16,20,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Card 1: Total Services -->
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="12" Padding="18,14" Margin="0,0,10,0" BorderBrush="#334155" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="TOTAL SERVICES" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" />
+                        <TextBlock Text="{Binding TotalServicesCount}" FontSize="28" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,4,0,0" />
+                        <TextBlock Text="Installed in Windows SCM" FontSize="12" Foreground="#64748B" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="#1E3A8A" CornerRadius="10" Width="44" Height="44" VerticalAlignment="Center">
+                        <TextBlock Text="📋" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Card 2: Running Services -->
+            <Border Grid.Column="1" Background="#1E293B" CornerRadius="12" Padding="18,14" Margin="5,0,5,0" BorderBrush="#334155" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="RUNNING SERVICES" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" />
+                        <TextBlock Text="{Binding RunningServicesCount}" FontSize="28" FontWeight="Bold" Foreground="#10B981" Margin="0,4,0,0" />
+                        <TextBlock Text="Active system processes" FontSize="12" Foreground="#64748B" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="#064E3B" CornerRadius="10" Width="44" Height="44" VerticalAlignment="Center">
+                        <TextBlock Text="⚡" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Card 3: Tracked Services Active -->
+            <Border Grid.Column="2" Background="#1E293B" CornerRadius="12" Padding="18,14" Margin="10,0,0,0" BorderBrush="#334155" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="PINNED DEV SERVICES" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding TrackedRunningCount}" FontSize="28" FontWeight="Bold" Foreground="#F59E0B" />
+                            <TextBlock Text=" / " FontSize="22" FontWeight="Normal" Foreground="#64748B" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TrackedTotalCount}" FontSize="22" FontWeight="SemiBold" Foreground="#94A3B8" VerticalAlignment="Center" />
+                            <TextBlock Text=" active" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Bottom" Margin="4,0,0,4" />
+                        </StackPanel>
+                        <TextBlock Text="Database, Docker, Web servers" FontSize="12" Foreground="#64748B" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="#78350F" CornerRadius="10" Width="44" Height="44" VerticalAlignment="Center">
+                        <TextBlock Text="⭐" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 3. Search and Filter Bar -->
+        <Border Grid.Row="2" Margin="20,8,20,12" Background="#1E293B" CornerRadius="10" Padding="12,10" BorderBrush="#334155" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="380" /> <!-- Search Box -->
+                    <ColumnDefinition Width="Auto" /> <!-- Pinned Filter -->
+                    <ColumnDefinition Width="*" />    <!-- Spacer -->
+                    <ColumnDefinition Width="Auto" /> <!-- Counter -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Search Box -->
+                <Border Grid.Column="0" Background="#0F172A" CornerRadius="8" BorderBrush="#334155" BorderThickness="1" Padding="8,4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="🔍" FontSize="12" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0,6,0" />
+                        <Grid Grid.Column="1">
+                            <TextBox x:Name="SearchBox"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="Transparent" 
+                                     Foreground="#F8FAFC" 
+                                     BorderThickness="0" 
+                                     VerticalAlignment="Center" 
+                                     FontSize="13"
+                                     CaretBrush="#FFFFFF" />
+                            <TextBlock Text="Search by service name or display name..." 
+                                       Foreground="#64748B" 
+                                       FontSize="12" 
+                                       VerticalAlignment="Center" 
+                                       IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <Button Grid.Column="2" 
+                                Command="{Binding ClearSearchCommand}"
+                                Content="✕" 
+                                Background="Transparent" 
+                                Foreground="#64748B" 
+                                BorderThickness="0" 
+                                Cursor="Hand" 
+                                Padding="4,0" 
+                                FontSize="11"
+                                VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- Pinned Filter Toggle -->
+                <CheckBox Grid.Column="1" 
+                          IsChecked="{Binding ShowTrackedOnly}" 
+                          VerticalAlignment="Center" 
+                          Margin="20,0,0,0"
+                          Cursor="Hand">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="★" Foreground="#F59E0B" FontSize="14" Margin="0,0,4,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Show Pinned Only" Foreground="#E2E8F0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </CheckBox>
+
+                <!-- Filter Result Count -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <TextBlock Text="Showing " Foreground="#94A3B8" FontSize="12" />
+                    <TextBlock Text="{Binding DisplayedCount}" FontWeight="Bold" Foreground="#F8FAFC" FontSize="12" />
+                    <TextBlock Text=" of " Foreground="#94A3B8" FontSize="12" />
+                    <TextBlock Text="{Binding TotalServicesCount}" FontWeight="Bold" Foreground="#F8FAFC" FontSize="12" />
+                    <TextBlock Text=" services" Foreground="#94A3B8" FontSize="12" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 4. Main Content Area (DataGrid + Action Detail Panel) -->
+        <Grid Grid.Row="3" Margin="20,0,20,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="6.5*" /> <!-- DataGrid List -->
+                <ColumnDefinition Width="12" />   <!-- Splitter Margin -->
+                <ColumnDefinition Width="3.5*" MinWidth="320" /> <!-- Right Detail Panel -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Services DataGrid -->
+            <Border Grid.Column="0" Background="#1E293B" CornerRadius="10" BorderBrush="#334155" BorderThickness="1" ClipToBounds="True">
+                <DataGrid ItemsSource="{Binding DisplayedServices}" 
+                          SelectedItem="{Binding SelectedService}"
+                          AutoGenerateColumns="False" 
+                          CanUserAddRows="False" 
+                          CanUserDeleteRows="False"
+                          CanUserResizeRows="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          GridLinesVisibility="None"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          RowHeaderWidth="0">
+
+                    <DataGrid.Columns>
+                        <!-- Pinned / Tracked Column -->
+                        <DataGridTemplateColumn Header="Pin" Width="46">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource PinButtonStyle}"
+                                            Command="{Binding DataContext.ToggleTrackCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Toggle Pin / Track">
+                                        <TextBlock Text="★" 
+                                                   FontSize="16" 
+                                                   Foreground="{Binding IsTracked, Converter={StaticResource TrackedToBrushConverter}}" />
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Status Badge Column -->
+                        <DataGridTemplateColumn Header="Status" Width="120">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Status, Converter={StaticResource StatusToBadgeBgConverter}}"
+                                            CornerRadius="12" 
+                                            Padding="8,4" 
+                                            HorizontalAlignment="Left"
+                                            Margin="4,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="7" Height="7" 
+                                                     Fill="{Binding Status, Converter={StaticResource StatusToColorConverter}}" 
+                                                     VerticalAlignment="Center" 
+                                                     Margin="0,0,6,0" />
+                                            <TextBlock Text="{Binding Status}" 
+                                                       Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                                                       FontSize="11" 
+                                                       FontWeight="Bold" 
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Service Name (System ID) -->
+                        <DataGridTextColumn Header="Service Name" 
+                                            Binding="{Binding ServiceName}" 
+                                            Width="170" 
+                                            FontFamily="Consolas, monospace" 
+                                            FontWeight="SemiBold" />
+
+                        <!-- Display Name -->
+                        <DataGridTextColumn Header="Display Name" 
+                                            Binding="{Binding DisplayName}" 
+                                            Width="*" />
+
+                        <!-- Startup Type -->
+                        <DataGridTextColumn Header="Startup" 
+                                            Binding="{Binding StartType}" 
+                                            Width="95" 
+                                            Foreground="#94A3B8" />
+
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <!-- Right: Detail & Action Panel -->
+            <Border Grid.Column="2" Background="#1E293B" CornerRadius="10" BorderBrush="#334155" BorderThickness="1" Padding="18">
+                <Grid>
+                    <!-- Null State (When no service is selected) -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="{Binding SelectedService, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=invert}">
+                        <TextBlock Text="🔍" FontSize="36" HorizontalAlignment="Center" Foreground="#64748B" />
+                        <TextBlock Text="No Service Selected" FontSize="16" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,10,0,4" />
+                        <TextBlock Text="Select a Windows service from the list to view details and control execution." 
+                                   TextWrapping="Wrap" TextAlignment="Center" Foreground="#64748B" FontSize="12" MaxWidth="240" />
+                    </StackPanel>
+
+                    <!-- Detail & Controls Content (When a service is selected) -->
+                    <Grid Visibility="{Binding SelectedService, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" /> <!-- Service Header -->
+                            <RowDefinition Height="Auto" /> <!-- Key Properties Badges -->
+                            <RowDefinition Height="Auto" /> <!-- Action Buttons -->
+                            <RowDefinition Height="*" />    <!-- Developer Notes / Details -->
+                            <RowDefinition Height="Auto" /> <!-- Pin Button -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Service Header -->
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Text="{Binding SelectedService.DisplayName}" 
+                                       FontSize="17" 
+                                       FontWeight="Bold" 
+                                       Foreground="#FFFFFF" 
+                                       TextWrapping="Wrap" />
+                            <Border Background="#0F172A" CornerRadius="6" Padding="8,4" HorizontalAlignment="Left" Margin="0,8,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="ID: " Foreground="#64748B" FontSize="12" />
+                                    <TextBlock Text="{Binding SelectedService.ServiceName}" 
+                                               Foreground="#38BDF8" 
+                                               FontFamily="Consolas, monospace" 
+                                               FontWeight="SemiBold" 
+                                               FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Properties Grid -->
+                        <Border Grid.Row="1" Background="#0F172A" CornerRadius="8" Padding="14" Margin="0,14,0,16" BorderBrush="#334155" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Current Status -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Status" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center" />
+                                <Border Grid.Row="0" Grid.Column="1" 
+                                        Background="{Binding SelectedService.Status, Converter={StaticResource StatusToBadgeBgConverter}}" 
+                                        CornerRadius="10" Padding="8,3" HorizontalAlignment="Right" Margin="0,2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6" Height="6" Fill="{Binding SelectedService.Status, Converter={StaticResource StatusToColorConverter}}" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                        <TextBlock Text="{Binding SelectedService.Status}" 
+                                                   Foreground="{Binding SelectedService.Status, Converter={StaticResource StatusToColorConverter}}" 
+                                                   FontWeight="Bold" FontSize="11" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Can Stop -->
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Can Stop" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center" Margin="0,8,0,0" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Margin="0,8,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="No" />
+                                            <Setter Property="Foreground" Value="#EF4444" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                            <Setter Property="FontSize" Value="12" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedService.CanStop}" Value="True">
+                                                    <Setter Property="Text" Value="Yes" />
+                                                    <Setter Property="Foreground" Value="#10B981" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <!-- Startup Type -->
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Startup Type" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center" Margin="0,8,0,0" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedService.StartType}" Foreground="#F8FAFC" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Margin="0,8,0,0" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Action Control Buttons -->
+                        <StackPanel Grid.Row="2">
+                            <TextBlock Text="SERVICE ACTIONS" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,8" />
+
+                            <!-- Start Button -->
+                            <Button Style="{StaticResource StartButtonStyle}" 
+                                    Command="{Binding StartCommand}" 
+                                    Margin="0,0,0,8" 
+                                    Height="40">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="▶" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Start Service" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Stop Button -->
+                            <Button Style="{StaticResource StopButtonStyle}" 
+                                    Command="{Binding StopCommand}" 
+                                    Margin="0,0,0,8" 
+                                    Height="40">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⏹" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Stop Service" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Restart Button -->
+                            <Button Style="{StaticResource RestartButtonStyle}" 
+                                    Command="{Binding RestartCommand}" 
+                                    Margin="0,0,0,8" 
+                                    Height="40">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🔄" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="Restart Service" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Developer Notes / Info Box -->
+                        <Border Grid.Row="3" Background="#0F172A" CornerRadius="8" Padding="12" Margin="0,10,0,10" BorderBrush="#334155" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="💡 Developer Tip" FontWeight="Bold" Foreground="#38BDF8" FontSize="12" Margin="0,0,0,4" />
+                                <TextBlock Text="Pin frequently used development services (e.g., PostgreSQL, SQL Server, Redis, Docker, Apache) to keep them at your fingertips and monitor background services easily." 
+                                           TextWrapping="Wrap" Foreground="#94A3B8" FontSize="11" LineHeight="16" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Pin / Unpin Button -->
+                        <Button Grid.Row="4" 
+                                Style="{StaticResource SecondaryButtonStyle}" 
+                                Command="{Binding ToggleTrackCommand}" 
+                                CommandParameter="{Binding SelectedService}"
+                                Height="38">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="★" Foreground="{Binding SelectedService.IsTracked, Converter={StaticResource TrackedToBrushConverter}}" FontSize="15" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Pin Service to Dev List" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedService.IsTracked}" Value="True">
+                                                    <Setter Property="Text" Value="Unpin Service from Dev List" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Button>
+
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 5. Bottom Status Bar -->
+        <Border Grid.Row="4" Background="#1E293B" BorderBrush="#334155" BorderThickness="0,1,0,0" Padding="16,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Status Message & Busy Indicator -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#10B981" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="Fill" Value="#F59E0B" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#CBD5E1" FontSize="12" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Right: Elevated Status -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="SCM Mode: " Foreground="#64748B" FontSize="11" />
+                    <TextBlock Text="Local Machine (Elevated)" Foreground="#94A3B8" FontWeight="SemiBold" FontSize="11" Margin="0,0,12,0" />
+                    <TextBlock Text="• Ready" Foreground="#10B981" FontWeight="SemiBold" FontSize="11" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>
