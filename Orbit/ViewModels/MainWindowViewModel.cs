@@ -14,10 +14,11 @@ namespace Orbit.ViewModels
     /// ViewModel for MainWindow managing Windows Services list, filtering,
     /// execution controls (Start, Stop, Restart), statistics, and persistence.
     /// </summary>
-    public class MainWindowViewModel : ViewModelBase
+    public class MainWindowViewModel : ViewModelBase, IDisposable
     {
         private readonly WindowsServiceManager _serviceManager;
         private readonly LocalStorageService _storageService;
+        private readonly SystemMonitorService _monitorService;
 
         private List<ServiceItemModel> _allServices = new();
         private ServiceItemModel? _selectedService;
@@ -25,16 +26,25 @@ namespace Orbit.ViewModels
         private bool _showTrackedOnly;
         private string _statusMessage = "Ready";
         private bool _isBusy;
+        private float _cpu;
+        private float _ram;
+        private bool _isDisposed;
 
         public MainWindowViewModel()
-            : this(new WindowsServiceManager(), new LocalStorageService())
+            : this(new WindowsServiceManager(), new LocalStorageService(), new SystemMonitorService())
         {
         }
 
         public MainWindowViewModel(WindowsServiceManager serviceManager, LocalStorageService storageService)
+            : this(serviceManager, storageService, new SystemMonitorService())
+        {
+        }
+
+        public MainWindowViewModel(WindowsServiceManager serviceManager, LocalStorageService storageService, SystemMonitorService monitorService)
         {
             _serviceManager = serviceManager;
             _storageService = storageService;
+            _monitorService = monitorService;
 
             DisplayedServices = new ObservableCollection<ServiceItemModel>();
 
@@ -70,6 +80,9 @@ namespace Orbit.ViewModels
 
             // Initial load
             RefreshServices();
+
+            // Background system resource monitoring
+            StartSystemMonitoring();
         }
 
         public ObservableCollection<ServiceItemModel> DisplayedServices { get; }
@@ -126,6 +139,18 @@ namespace Orbit.ViewModels
                     RelayCommand.RaiseCanExecuteChanged();
                 }
             }
+        }
+
+        public float Cpu
+        {
+            get => _cpu;
+            set => SetProperty(ref _cpu, value);
+        }
+
+        public float Ram
+        {
+            get => _ram;
+            set => SetProperty(ref _ram, value);
         }
 
         #region Statistics
@@ -362,6 +387,37 @@ namespace Orbit.ViewModels
             }
 
             UpdateStatistics();
+        }
+
+        #endregion
+
+        #region System Monitor
+
+        private void StartSystemMonitoring()
+        {
+            Task.Run(async () =>
+            {
+                while (!_isDisposed)
+                {
+                    try
+                    {
+                        Cpu = _monitorService.GetCpuUsage();
+                        Ram = _monitorService.GetRamUsage();
+                    }
+                    catch
+                    {
+                        // Ignore monitoring errors to maintain loop continuity
+                    }
+
+                    await Task.Delay(2000);
+                }
+            });
+        }
+
+        public void Dispose()
+        {
+            _isDisposed = true;
+            _monitorService.Dispose();
         }
 
         #endregion
