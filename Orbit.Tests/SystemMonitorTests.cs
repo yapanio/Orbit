@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Orbit.Services;
 using Orbit.ViewModels;
@@ -7,23 +6,8 @@ using Xunit;
 
 namespace Orbit.Tests
 {
-    public class SystemMonitorTests : IDisposable
+    public class SystemMonitorTests
     {
-        private readonly string _testJsonPath;
-
-        public SystemMonitorTests()
-        {
-            _testJsonPath = Path.Combine(Path.GetTempPath(), $"orbit_monitor_test_{Guid.NewGuid():N}.json");
-        }
-
-        public void Dispose()
-        {
-            if (File.Exists(_testJsonPath))
-            {
-                try { File.Delete(_testJsonPath); } catch { }
-            }
-        }
-
         private class FakeSystemMonitorService : SystemMonitorService
         {
             public float MockCpu { get; set; } = 35.5f;
@@ -54,10 +38,10 @@ namespace Orbit.Tests
                 MockRam = 70.0f
             };
 
-            var storage = new LocalStorageService(_testJsonPath);
+            var dbService = new FavoriteDbService();
             var manager = new WindowsServiceManager();
 
-            using var vm = new MainWindowViewModel(manager, storage, fakeMonitor);
+            using var vm = new MainWindowViewModel(manager, dbService, fakeMonitor);
 
             // Wait a short moment for the background Task.Run to record values
             await Task.Delay(100);
@@ -75,10 +59,10 @@ namespace Orbit.Tests
                 MockRam = 20.0f
             };
 
-            var storage = new LocalStorageService(_testJsonPath);
+            var dbService = new FavoriteDbService();
             var manager = new WindowsServiceManager();
 
-            using var vm = new MainWindowViewModel(manager, storage, fakeMonitor);
+            using var vm = new MainWindowViewModel(manager, dbService, fakeMonitor);
 
             var cpuChanged = false;
             var ramChanged = false;

@@ -36,7 +36,6 @@ namespace Orbit.Services
                 {
                     string status = sc.Status.ToString();
                     bool canStop = false;
-                    bool canPause = false;
                     string startType = "Unknown";
 
                     try
@@ -46,14 +45,6 @@ namespace Orbit.Services
                     catch
                     {
                         // Some system services restrict querying capabilities
-                    }
-
-                    try
-                    {
-                        canPause = sc.CanPauseAndContinue;
-                    }
-                    catch
-                    {
                     }
 
                     try
@@ -70,7 +61,6 @@ namespace Orbit.Services
                         DisplayName = string.IsNullOrWhiteSpace(sc.DisplayName) ? sc.ServiceName : sc.DisplayName,
                         Status = status,
                         CanStop = canStop,
-                        CanPauseAndContinue = canPause,
                         StartType = startType
                     });
                 }
@@ -110,7 +100,6 @@ namespace Orbit.Services
                 using var sc = new ServiceController(model.ServiceName);
                 model.Status = sc.Status.ToString();
                 try { model.CanStop = sc.CanStop; } catch { }
-                try { model.CanPauseAndContinue = sc.CanPauseAndContinue; } catch { }
                 try { model.StartType = sc.StartType.ToString(); } catch { }
             }
             catch

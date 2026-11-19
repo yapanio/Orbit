@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using Orbit.Models;
 using Orbit.Services;
@@ -8,23 +7,8 @@ using Xunit;
 
 namespace Orbit.Tests
 {
-    public class ViewModelTests : IDisposable
+    public class ViewModelTests
     {
-        private readonly string _testJsonPath;
-
-        public ViewModelTests()
-        {
-            _testJsonPath = Path.Combine(Path.GetTempPath(), $"orbit_vm_test_{Guid.NewGuid():N}.json");
-        }
-
-        public void Dispose()
-        {
-            if (File.Exists(_testJsonPath))
-            {
-                try { File.Delete(_testJsonPath); } catch { }
-            }
-        }
-
         [Fact]
         public void WindowsServiceManager_CanQueryServicesOnLocalMachine()
         {
@@ -45,9 +29,9 @@ namespace Orbit.Tests
         [Fact]
         public void MainWindowViewModel_InitializesAndLoadsServices()
         {
-            var storage = new LocalStorageService(_testJsonPath);
+            var dbService = new FavoriteDbService();
             var manager = new WindowsServiceManager();
-            var vm = new MainWindowViewModel(manager, storage);
+            var vm = new MainWindowViewModel(manager, dbService);
 
             // Initial load executes asynchronously; wait briefly if necessary
             var timeout = DateTime.UtcNow.AddSeconds(5);
@@ -65,9 +49,9 @@ namespace Orbit.Tests
         [Fact]
         public void MainWindowViewModel_SearchFilteringWorks()
         {
-            var storage = new LocalStorageService(_testJsonPath);
+            var dbService = new FavoriteDbService();
             var manager = new WindowsServiceManager();
-            var vm = new MainWindowViewModel(manager, storage);
+            var vm = new MainWindowViewModel(manager, dbService);
 
             var timeout = DateTime.UtcNow.AddSeconds(5);
             while (vm.IsBusy && DateTime.UtcNow < timeout)
@@ -88,11 +72,11 @@ namespace Orbit.Tests
         }
 
         [Fact]
-        public void MainWindowViewModel_PinningPersistsToDisk()
+        public void MainWindowViewModel_PinningPersistsToDatabase()
         {
-            var storage = new LocalStorageService(_testJsonPath);
+            var dbService = new FavoriteDbService();
             var manager = new WindowsServiceManager();
-            var vm = new MainWindowViewModel(manager, storage);
+            var vm = new MainWindowViewModel(manager, dbService);
 
             var timeout = DateTime.UtcNow.AddSeconds(5);
             while (vm.IsBusy && DateTime.UtcNow < timeout)
@@ -103,29 +87,41 @@ namespace Orbit.Tests
             var target = vm.DisplayedServices.First();
             bool initialTracked = target.IsTracked;
 
-            vm.ToggleTrack(target);
-            Assert.NotEqual(initialTracked, target.IsTracked);
-
-            // Verify persistence by loading in fresh service
-            var reloadedStorage = new LocalStorageService(_testJsonPath);
-            var tracked = reloadedStorage.LoadTrackedServices();
-
-            if (target.IsTracked)
+            try
             {
-                Assert.Contains(target.ServiceName, tracked);
+                // Toggle pin
+                vm.ToggleTrack(target);
+                Assert.NotEqual(initialTracked, target.IsTracked);
+
+                // Verify persistence by querying fresh db service
+                var reloadedDbService = new FavoriteDbService();
+                var tracked = reloadedDbService.LoadFavoriteServiceNames(vm.CurrentUserId);
+
+                if (target.IsTracked)
+                {
+                    Assert.Contains(target.ServiceName, tracked);
+                }
+                else
+                {
+                    Assert.DoesNotContain(target.ServiceName, tracked);
+                }
             }
-            else
+            finally
             {
-                Assert.DoesNotContain(target.ServiceName, tracked);
+                // Restore original state
+                if (target.IsTracked != initialTracked)
+                {
+                    vm.ToggleTrack(target);
+                }
             }
         }
 
         [Fact]
         public void MainWindowViewModel_CanExecuteRulesForServiceControls()
         {
-            var storage = new LocalStorageService(_testJsonPath);
+            var dbService = new FavoriteDbService();
             var manager = new WindowsServiceManager();
-            var vm = new MainWindowViewModel(manager, storage);
+            var vm = new MainWindowViewModel(manager, dbService);
 
             var timeout = DateTime.UtcNow.AddSeconds(5);
             while (vm.IsBusy && DateTime.UtcNow < timeout)
@@ -174,6 +170,102 @@ namespace Orbit.Tests
             Assert.False(vm.StartCommand.CanExecute(null));
             Assert.False(vm.StopCommand.CanExecute(null));
             Assert.False(vm.RestartCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void MainWindowViewModel_FavoriteServicesCollectionAndSearchWork()
+        {
+            var dbService = new FavoriteDbService();
+            var manager = new WindowsServiceManager();
+            var vm = new MainWindowViewModel(manager, dbService);
+
+            var timeout = DateTime.UtcNow.AddSeconds(5);
+            while (vm.IsBusy && DateTime.UtcNow < timeout)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+
+            var service = vm.DisplayedServices.First();
+            bool wasTracked = service.IsTracked;
+            if (!service.IsTracked)
+            {
+                vm.ToggleTrack(service);
+            }
+
+            try
+            {
+                Assert.True(vm.HasFavoriteServices);
+                Assert.Contains(vm.FavoriteServices, s => s.ServiceName == service.ServiceName);
+
+                // Test search in favorites
+                vm.FavoriteSearchText = service.ServiceName;
+                Assert.Contains(vm.FavoriteServices, s => s.ServiceName == service.ServiceName);
+
+                vm.FavoriteSearchText = "non_existent_favorite_search_query_999";
+                Assert.Empty(vm.FavoriteServices);
+
+                vm.ClearFavoriteSearchCommand.Execute(null);
+                Assert.NotEmpty(vm.FavoriteServices);
+            }
+            finally
+            {
+                if (!wasTracked && service.IsTracked)
+                {
+                    vm.ToggleTrack(service);
+                }
+            }
+        }
+
+        [Fact]
+        public void MainWindowViewModel_AutoDetectDevServicesWorks()
+        {
+            var dbService = new FavoriteDbService();
+            var manager = new WindowsServiceManager();
+            var vm = new MainWindowViewModel(manager, dbService);
+
+            var timeout = DateTime.UtcNow.AddSeconds(5);
+            while (vm.IsBusy && DateTime.UtcNow < timeout)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+
+            Assert.True(vm.AutoDetectDevServicesCommand.CanExecute(null));
+            vm.AutoDetectDevServicesCommand.Execute(null);
+
+            // Status message must indicate result
+            Assert.False(string.IsNullOrWhiteSpace(vm.StatusMessage));
+        }
+
+        [Fact]
+        public void MainWindowViewModel_CanInitializeWithAdminUser()
+        {
+            var auth = new AuthService();
+            var admin = auth.Login("admin", "admin123");
+            Assert.NotNull(admin);
+
+            var dbService = new FavoriteDbService();
+            var manager = new WindowsServiceManager();
+            var vm = new MainWindowViewModel(manager, dbService, admin);
+
+            Assert.Equal(1, vm.CurrentUserId);
+            Assert.Equal("Administrator", vm.CurrentUserName);
+            Assert.Equal("👤 Administrator", vm.CurrentUserDisplay);
+        }
+
+        [Fact]
+        public void MainWindowViewModel_CanInitializeWithCamerUser()
+        {
+            var auth = new AuthService();
+            var camer = auth.Login("camer", "123456");
+            Assert.NotNull(camer);
+
+            var dbService = new FavoriteDbService();
+            var manager = new WindowsServiceManager();
+            var vm = new MainWindowViewModel(manager, dbService, camer);
+
+            Assert.Equal(2, vm.CurrentUserId);
+            Assert.Equal("Developer Camer", vm.CurrentUserName);
+            Assert.Equal("👤 Developer Camer", vm.CurrentUserDisplay);
         }
     }
 }
