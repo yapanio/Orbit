@@ -7,7 +7,7 @@ using Orbit.Models.Entities;
 namespace Orbit.Services
 {
     /// <summary>
-    /// Quản lý dữ liệu dịch vụ yêu thích (Favorite Services) lưu trong SQL Server bằng EF Core.
+    /// Quản lý dữ liệu dịch vụ yêu thích (Favorite Services) lưu trong SQLite bằng EF Core.
     /// </summary>
     public class FavoriteDbService
     {
@@ -33,7 +33,7 @@ namespace Orbit.Services
             }
             catch (Exception ex)
             {
-                DialogHelper.ShowError($"Lỗi khi tải danh sách yêu thích từ SQL Server:\n\n{ex.Message}", "Lỗi cơ sở dữ liệu");
+                DialogHelper.ShowError($"Lỗi khi tải danh sách yêu thích từ cơ sở dữ liệu:\n\n{ex.Message}", "Lỗi cơ sở dữ liệu");
                 return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
         }
@@ -77,7 +77,7 @@ namespace Orbit.Services
             }
             catch (Exception ex)
             {
-                DialogHelper.ShowError($"Lỗi khi lưu danh sách yêu thích vào SQL Server:\n\n{ex.Message}", "Lỗi cơ sở dữ liệu");
+                DialogHelper.ShowError($"Lỗi khi lưu danh sách yêu thích vào cơ sở dữ liệu:\n\n{ex.Message}", "Lỗi cơ sở dữ liệu");
             }
         }
 

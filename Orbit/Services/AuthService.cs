@@ -6,7 +6,7 @@ using Orbit.Models.Entities;
 namespace Orbit.Services
 {
     /// <summary>
-    /// Service xác thực người dùng đăng nhập qua SQL Server (EF Core).
+    /// Service xác thực người dùng đăng nhập qua SQLite (EF Core).
     /// </summary>
     public class AuthService
     {
@@ -35,7 +35,7 @@ namespace Orbit.Services
             }
             catch (Exception ex)
             {
-                DialogHelper.ShowError($"Lỗi kết nối cơ sở dữ liệu khi đăng nhập:\n\n{ex.Message}\n\nVui lòng kiểm tra dịch vụ SQL Server.", "Lỗi kết nối CSDL");
+                DialogHelper.ShowError($"Lỗi kết nối cơ sở dữ liệu khi đăng nhập:\n\n{ex.Message}", "Lỗi kết nối CSDL");
                 return null;
             }
         }

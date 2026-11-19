@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using Orbit.Core;
@@ -40,6 +40,9 @@ namespace Orbit
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Đảm bảo SQLite database và dữ liệu mặc định đã sẵn sàng
+            Services.OrbitDbContext.EnsureDatabaseCreated();
 
             // Ngăn WPF tự động tắt app khi LoginWindow đóng lại
             ShutdownMode = ShutdownMode.OnExplicitShutdown;

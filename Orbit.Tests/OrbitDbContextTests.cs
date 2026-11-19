@@ -14,7 +14,7 @@ public class OrbitDbContextTests
         using var context = new OrbitDbContext();
         
         // Assert database can be connected
-        Assert.True(context.Database.CanConnect(), "Database connection failed. Ensure SQL Server is running.");
+        Assert.True(context.Database.CanConnect(), "Database connection failed. Ensure SQLite database is created.");
 
         // Assert seeded users exist
         var adminUser = context.Users.Include(u => u.FavoriteServices).FirstOrDefault(u => u.Username == "admin");
